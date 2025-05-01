@@ -14,7 +14,6 @@ import {
 import React, { useEffect, useState } from "react";
 import icons from "../../constants/icons";
 import BooksType from "../../components/BooksType";
-import { useNavigation } from "@react-navigation/native";
 
 const HomeScreen = ({ navigation }) => {
   const [books, setBooks] = useState([]);

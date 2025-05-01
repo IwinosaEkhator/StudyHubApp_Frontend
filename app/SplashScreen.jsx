@@ -10,7 +10,7 @@ export default function SplashScreen({ navigation }) {
     setTimeout(() => {
       // If accessToken exists, navigate to "Main"; else, navigate to "Onboarding"
       if (accessToken) {
-        navigation.replace("User");
+        navigation.replace("Main");
       } else {
         navigation.replace("Onboarding");
       }

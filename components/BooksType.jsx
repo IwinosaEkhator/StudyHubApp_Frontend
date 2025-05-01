@@ -49,7 +49,11 @@ const BooksType = ({ type, navigation }) => {
         <>
           <View className="flex-row justify-between align-center">
             <Text className="text-[22px] font-bold">{type}</Text>
-            <Text>See All</Text>
+            <TouchableOpacity
+              onPress={() => navigation.navigate("Category", { type })}
+            >
+              <Text style={{ color: "#000" }}>See All</Text>
+            </TouchableOpacity>
           </View>
 
           <FlatList
