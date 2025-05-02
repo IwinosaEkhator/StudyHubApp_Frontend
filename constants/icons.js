@@ -6,6 +6,9 @@ import bookmark from "../assets/icons/ribbon.png"
 import arrowBack from "../assets/icons/back.png"
 import blackArrowBack from "../assets/icons/blackBack.png"
 import homeIcon from '../assets/icons/Home.svg'
+import booksIcon from '../assets/icons/books-stack-of-three.png';
+import exitIcon from '../assets/icons/exit.png';
+
 
 export default {
     temLogo,
@@ -15,5 +18,7 @@ export default {
     bookmark,
     arrowBack,
     blackArrowBack,
-    homeIcon
+    homeIcon,
+    booksIcon,
+    exitIcon
 };

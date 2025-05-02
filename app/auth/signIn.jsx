@@ -36,7 +36,7 @@ const SignInScreen = () => {
     try {
       const result = await login(email, password);
       if (result) {
-        navigation.navigate("User", { screen: "Home" });
+        navigation.navigate("Main", { screen: "Home" });
       }
     } catch (error) {
       console.error("Login error in LoginScreen:", error);

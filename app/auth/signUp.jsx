@@ -42,7 +42,7 @@ const SignUpScreen = () => {
       console.log("Register result:", result); // Log the full response for debugging
       if (result) {
         // Navigate to HomeScreen with the email from the result
-        navigation.navigate("User", { screen: "Home" });
+        navigation.navigate("Main", { screen: "Home" });
         console.log("Registration Successful");
       } else {
         Alert.alert(
