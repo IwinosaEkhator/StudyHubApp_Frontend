@@ -1,9 +1,10 @@
 import { View, Text, Image, ScrollView, TouchableOpacity } from "react-native";
-import React from "react";
+import React, { useContext } from "react";
 import { useLocalSearchParams } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import CustomButton from "../../components/CustomButton";
 import icons from "../../constants/icons";
+import { BookmarkContext } from "../../context/BookmarkContext";
 
 const InfoPage = ({ route, navigation }) => {
   const book = route?.params?.book;
@@ -30,6 +31,14 @@ const InfoPage = ({ route, navigation }) => {
     } else {
       Alert.alert("No Preview Available", "This book doesn't have a preview.");
     }
+  };
+
+  const { isBookmarked, addBookmark, removeBookmark } = useContext(BookmarkContext);
+  const bookmarked = isBookmarked(book.id);
+
+  const toggle = () => {
+    if (bookmarked) removeBookmark(book.id);
+    else addBookmark(book);
   };
 
   return (
@@ -62,13 +71,13 @@ const InfoPage = ({ route, navigation }) => {
               resizeMethod="contain"
             />
           </TouchableOpacity>
-          <View style={{ backgroundColor: "rgba(0, 0, 0, 0.2)", padding: 7, borderRadius: 10 }}>
+          <TouchableOpacity style={{ backgroundColor: "rgba(0, 0, 0, 0.2)", padding: 7, borderRadius: 10 }} onPress={toggle}>
             <Image
-              source={icons.bookmark}
+              source={bookmarked ? icons.bookmarkFilled : icons.bookmarkOutlined}
               className="w-7 h-7"
               resizeMethod="contain"
             />
-          </View>
+          </TouchableOpacity>
         </View>
 
         <View className="mt-24 w-full absolute">

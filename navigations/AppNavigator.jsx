@@ -10,6 +10,8 @@ import InfoPage from "../app/library/infoPage";
 import ReadBookScreen from "../app/library/readBooks";
 import CategoryScreen from "../app/library/categoryScreen";
 import ProfileScreen from "../app/profile/profileScreen";
+import BookmarksScreen from "../app/library/bookmarkScreen";
+import EditProfileScreen from "../app/profile/editProfileScreen";
 
 const Stack = createStackNavigator();
 
@@ -40,6 +42,8 @@ export default function AppNavigator() {
 
         {/* Profile Screens */}
         <Stack.Screen name="Profile" component={ProfileScreen} />
+        <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+        <Stack.Screen name="Bookmark" component={BookmarksScreen} />
       </Stack.Navigator>
     </>
   );

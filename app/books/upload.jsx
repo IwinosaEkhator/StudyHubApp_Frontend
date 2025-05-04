@@ -1,0 +1,164 @@
+import React, { useState, useContext } from "react";
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  Image,
+  StyleSheet,
+  ActivityIndicator,
+  Alert,
+} from "react-native";
+import * as ImagePicker from "expo-image-picker";
+import * as DocumentPicker from "expo-document-picker";
+import axios from "axios";
+import { AuthContext } from "../../context/AuthContext";
+import API_ENDPOINTS from "../../api/apiConfig";
+
+export default function UploadBookScreen() {
+  const { accessToken } = useContext(AuthContext);
+
+  const [title, setTitle] = useState("");
+  const [authors, setAuthors] = useState("");
+  const [description, setDescription] = useState("");
+  const [cover, setCover] = useState(null);
+  const [file, setFile] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const pickCover = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") return Alert.alert("Permission required");
+    const res = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: "Images",
+      quality: 0.7,
+    });
+    if (!res.canceled) setCover(res.assets[0]);
+  };
+
+  const pickFile = async () => {
+    try {
+      const res = await DocumentPicker.getDocumentAsync({
+        type: ["application/pdf", "application/epub+zip"],
+        copyToCacheDirectory: true,
+        multiple: false,
+      });
+      console.log("Document picker result:", res);
+
+      // New API shape: res.canceled + res.assets[]
+      if (res.canceled === false && res.assets?.length > 0) {
+        // Grab the first picked file
+        const asset = res.assets[0];
+        setFile({
+          uri: asset.uri,
+          name: asset.name,
+          type: asset.mimeType,
+        });
+        console.log("Picked file:", asset);
+      } else {
+        console.log("User cancelled or no assets:", res);
+      }
+    } catch (err) {
+      console.error("Document picker error:", err);
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!title || !file) return Alert.alert("Title & file are required");
+    setLoading(true);
+    const form = new FormData();
+    form.append("title", title);
+    form.append("authors", authors);
+    form.append("description", description);
+    if (cover) {
+      const uriParts = cover.uri.split(".");
+      const ext = uriParts.pop();
+      form.append("cover", {
+        uri: cover.uri,
+        name: `cover.${ext}`,
+        type: `image/${ext}`,
+      });
+    }
+    // document
+    form.append("file", {
+      uri: file.uri,
+      name: file.name,
+      type: file.mimeType,
+    });
+
+    try {
+      const resp = await axios.post(API_ENDPOINTS.books, form, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+      Alert.alert("Success", resp.data.message);
+      // clear form or navigate
+    } catch (err) {
+      console.error(err);
+      Alert.alert("Error", err.response?.data?.message || err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  
+  return (
+    <View style={s.container}>
+      <Text style={s.label}>Title*</Text>
+      <TextInput style={s.input} value={title} onChangeText={setTitle} />
+      <Text style={s.label}>Authors</Text>
+      <TextInput style={s.input} value={authors} onChangeText={setAuthors} />
+      <Text style={s.label}>Description</Text>
+      <TextInput
+        style={[s.input, { height: 80 }]}
+        value={description}
+        onChangeText={setDescription}
+        multiline
+      />
+
+      {cover && <Image source={{ uri: cover.uri }} style={s.coverPreview} />}
+      <TouchableOpacity style={s.btn} onPress={pickCover}>
+        <Text style={s.btnText}>{cover ? "Change Cover" : "Pick Cover"}</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={s.btn} onPress={pickFile}>
+        <Text style={s.btnText}>{file ? file.name : "Pick PDF/EPUB"}</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[s.btn, s.submit]}
+        onPress={handleSubmit}
+        disabled={loading}
+      >
+        {loading ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <Text style={s.btnText}>Upload Book</Text>
+        )}
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+const s = StyleSheet.create({
+  container: { flex: 1, padding: 20, backgroundColor: "#fff" },
+  label: { marginTop: 10, fontWeight: "600" },
+  input: {
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 5,
+    padding: 8,
+    marginTop: 5,
+  },
+  btn: {
+    marginTop: 15,
+    padding: 12,
+    backgroundColor: "#007bff",
+    borderRadius: 5,
+    alignItems: "center",
+  },
+  submit: { backgroundColor: "#28a745" },
+  btnText: { color: "#fff", fontWeight: "600" },
+  coverPreview: { width: 100, height: 150, marginTop: 10, borderRadius: 5 },
+});

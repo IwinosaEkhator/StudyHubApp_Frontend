@@ -8,6 +8,8 @@ import blackArrowBack from "../assets/icons/blackBack.png"
 import homeIcon from '../assets/icons/Home.svg'
 import booksIcon from '../assets/icons/books-stack-of-three.png';
 import exitIcon from '../assets/icons/exit.png';
+import bookmarkFilled from '../assets/icons/bookmarkFilled.png';
+import bookmarkOutlined from '../assets/icons/bookmarkOutline.png';
 
 
 export default {
@@ -20,5 +22,7 @@ export default {
     blackArrowBack,
     homeIcon,
     booksIcon,
-    exitIcon
+    exitIcon,
+    bookmarkFilled,
+    bookmarkOutlined
 };

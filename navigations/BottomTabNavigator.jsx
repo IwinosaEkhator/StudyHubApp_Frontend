@@ -14,6 +14,8 @@ import HomeScreen from "../app/library/homeScreen";
 import icons from "../constants/icons";
 import HomeIcon from "../components/icons/HomeIcon";
 import ProfileIcon from "../components/icons/ProfileIcon";
+import UploadBookScreen from "../app/books/upload";
+import AddCircleIcon from "../components/icons/AddCircleIcon";
 
 const Tab = createBottomTabNavigator();
 
@@ -58,7 +60,24 @@ export default function App() {
         options={{
           tabBarLabel: "Home",
           tabBarIcon: ({ focused }) => (
-            <HomeIcon fill={focused ? "#FFF" : "rgba(0, 0, 0, 0.5)"} style={styles.icon}/>
+            <HomeIcon
+              fill={focused ? "#FFF" : "rgba(0, 0, 0, 0.5)"}
+              style={styles.icon}
+            />
+          ),
+        }}
+      />
+
+      <Tab.Screen
+        name="Upload"
+        component={UploadBookScreen}
+        options={{
+          tabBarLabel: "Upload",
+          tabBarIcon: ({ focused }) => (
+            <AddCircleIcon
+              fill={focused ? "#FFF" : "rgba(0, 0, 0, 0.5)"}
+              style={styles.icon}
+            />
           ),
         }}
       />
@@ -69,7 +88,10 @@ export default function App() {
         options={{
           tabBarLabel: "Profile",
           tabBarIcon: ({ focused }) => (
-            <ProfileIcon fill={focused ? "#FFF" : "rgba(0, 0, 0, 0.5)"} style={styles.icon}/>
+            <ProfileIcon
+              fill={focused ? "#FFF" : "rgba(0, 0, 0, 0.5)"}
+              style={styles.icon}
+            />
           ),
         }}
       />

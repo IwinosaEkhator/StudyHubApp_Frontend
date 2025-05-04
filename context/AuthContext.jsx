@@ -16,7 +16,7 @@ export const AuthProvider = ({ children }) => {
 
   // Create an Axios instance with the base URL of your backend API
   const api = axios.create({
-    baseURL: 'http://192.168.115.136:8000/api', // Replace with your backend URL
+    baseURL: 'http://192.168.161.136:8000/api', // Replace with your backend URL
     timeout: 30000, // Increase timeout to 30 seconds
   });
 

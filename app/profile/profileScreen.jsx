@@ -5,8 +5,10 @@ import {
   StyleSheet,
   TouchableOpacity,
   FlatList,
+  Alert,
+  ActivityIndicator,
 } from "react-native";
-import React, { useContext, useRef } from "react";
+import React, { useContext, useEffect, useRef, useState } from "react";
 import { SafeAreaView } from "react-native";
 import icons from "../../constants/icons";
 import images from "../../constants/images";
@@ -21,10 +23,21 @@ import axios from "axios";
 import { AuthContext } from "../../context/AuthContext";
 import API_ENDPOINTS from "../../api/apiConfig";
 import * as ImagePicker from "expo-image-picker";
+import DefaultProfileIcon from "../../components/icons/DefaultProfileIcon";
 
 const SETTINGS = [
-  { key: "mybooks", label: "My Books", icon: icons.booksIcon },
-  { key: "bookmarks", label: "Bookmark", icon: icons.bookmark },
+  {
+    key: "mybooks",
+    label: "My Books",
+    icon: icons.booksIcon,
+    link: "Bookmark",
+  },
+  {
+    key: "bookmarks",
+    label: "Bookmark",
+    icon: icons.bookmark,
+    link: "Bookmark",
+  },
 ];
 
 export default function ProfileScreen({ navigation }) {
@@ -33,7 +46,7 @@ export default function ProfileScreen({ navigation }) {
       style={styles.row}
       activeOpacity={0.6}
       onPress={() => {
-        // e.g. navigation.navigate(item.key)
+        navigation.navigate(item.link);
         console.log("Pressed", item.key);
       }}
     >
@@ -49,52 +62,33 @@ export default function ProfileScreen({ navigation }) {
   );
 
   const photoSheetRef = useRef();
+  const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   const { logout, accessToken } = useContext(AuthContext);
 
-  // Update profile via API (for text fields)
-  // const handleUpdateProfile = async () => {
-  //   if (!selectedValue) {
-  //     Alert.alert("Error", "Value cannot be empty");
-  //     return;
-  //   }
-  //   console.log("Updating field:", selectedField, "with value:", selectedValue);
-  //   try {
-  //     const response = await axios.patch(
-  //       API_ENDPOINTS.profileUpdate,
-  //       {
-  //         [selectedField]: selectedValue,
-  //       },
-  //       {
-  //         headers: { Authorization: `Bearer ${accessToken}` },
-  //       }
-  //     );
-  //     console.log("Update response:", response.data);
-  //     if (response.data.message) {
-  //       Alert.alert("Success", response.data.message);
-  //       setProfile(response.data.user);
-  //       bottomSheetRef.current.close();
-  //     } else {
-  //       Alert.alert("Error", response.data.message || "Update failed");
-  //     }
-  //   } catch (error) {
-  //     console.error(
-  //       "Error updating profile:",
-  //       error.response?.data || error.message
-  //     );
-  //     let errorMessage = "An error occurred while updating your profile.";
-  //     if (error.response?.data?.error) {
-  //       if (typeof error.response.data.error === "string") {
-  //         errorMessage = error.response.data.error;
-  //       } else if (typeof error.response.data.error === "object") {
-  //         errorMessage = Object.values(error.response.data.error)
-  //           .flat()
-  //           .join("\n");
-  //       }
-  //     }
-  //     Alert.alert("Error", errorMessage);
-  //   }
-  // };
+  // Fetch profile data on mount
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        console.log("Fetching profile data...");
+        const response = await axios.get(API_ENDPOINTS.profile, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        console.log("Fetched profile:", response.data.user);
+        setProfile(response.data.user);
+      } catch (error) {
+        console.error(
+          "Error fetching profile:",
+          error.response?.data || error.message
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProfile();
+  }, [accessToken]);
 
   // Function to take a new photo using the device camera
   const handleTakePhoto = async () => {
@@ -246,6 +240,25 @@ export default function ProfileScreen({ navigation }) {
     photoSheetRef.current.close();
   };
 
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.loaderContainer}>
+          <ActivityIndicator size="large" color="#000" />
+          <Text style={styles.loaderText}>Loading profile...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <Text style={styles.errorText}>Error loading profile.</Text>
+      </SafeAreaView>
+    );
+  }
+
   // Log Out
   const handleLogout = async () => {
     try {
@@ -262,6 +275,7 @@ export default function ProfileScreen({ navigation }) {
       );
     }
   };
+  
   return (
     <>
       <SafeAreaView style={styles.safeArea} classname="bg-white w-full h-full">
@@ -276,11 +290,17 @@ export default function ProfileScreen({ navigation }) {
           {/* Profile */}
           <View style={styles.profileRow}>
             <View>
-              <Image
-                source={images.profileImage}
-                style={styles.profileImage}
-                resizeMethod="contain"
-              />
+              {/* Display profile photo if available, otherwise show default */}
+              {profile.profile_photo ? (
+                <Image
+                  source={{
+                    uri: `${API_ENDPOINTS.profile_photo_base_url}/storage/${profile.profile_photo}`,
+                  }}
+                  style={styles.profileImage}
+                />
+              ) : (
+                <DefaultProfileIcon style={styles.profileImage} />
+              )}
               <TouchableOpacity
                 onPress={() => photoSheetRef.current.open()}
                 style={styles.cameraBox}
@@ -288,14 +308,14 @@ export default function ProfileScreen({ navigation }) {
                 <CameraIcon styles={styles} />
               </TouchableOpacity>
             </View>
-
             <View>
-              <Text style={styles.nameText}>Iwinosa</Text>
-              <Text style={{ marginBottom: 10 }}>brasenekhator@gmail.com</Text>
+              <Text style={styles.nameText}>{profile.username}</Text>
+              <Text style={{ marginBottom: 15 }}>{profile.email}</Text>
               <CustomButton
                 title="Edit Profile"
-                containerStyles="min-h-[50px]"
+                containerStyles="min-h-[45px]"
                 textStyles="text-2xl"
+                handlePress={() => navigation.navigate("EditProfile")}
               />
             </View>
           </View>
@@ -404,19 +424,18 @@ const styles = StyleSheet.create({
   // Profile
   profileRow: {
     flexDirection: "row",
+    width: "100%",
     alignItems: "center",
     marginBottom: 20,
   },
-  profileImage: {
-    marginRight: 20,
-  },
+  profileImage: { width: 100, height: 100, borderRadius: 50, marginRight: 30 },
   cameraBox: {
     padding: 7,
     backgroundColor: "#000",
     borderRadius: 20,
     position: "absolute",
     bottom: 6,
-    right: 15,
+    right: 20,
   },
   nameText: {
     fontSize: 22,
@@ -490,4 +509,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 500,
   },
+  loaderContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
+  loaderText: { marginTop: 12, fontSize: 16, color: "#666" },
+  errorText: { textAlign: "center", color: "red", marginTop: 20 },
 });

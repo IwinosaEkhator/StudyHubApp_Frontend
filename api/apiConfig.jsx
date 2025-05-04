@@ -1,5 +1,5 @@
 //Define the base URL for Laravel API
-const API_BASE_URL = "http://192.168.115.136:8000";
+const API_BASE_URL = "http://192.168.161.136:8000";
 
 //Define API endpoints using the base URL
 const API_ENDPOINTS = {
@@ -13,7 +13,10 @@ const API_ENDPOINTS = {
   profile: `${API_BASE_URL}/api/profile`,
   profileUpdate: `${API_BASE_URL}/api/profile`,
   // Base URL for profile photos stored in /storage:
-  profile_photo_base_url: API_BASE_URL,  
+  profile_photo_base_url: API_BASE_URL,
+
+  // Books Endpoint
+  books: `${API_BASE_URL}/api/books`
 };
 
 export default API_ENDPOINTS;

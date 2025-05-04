@@ -8,6 +8,7 @@ import AppNavigator from "../navigations/AppNavigator";
 import { AuthProvider } from "../context/AuthContext";
 import { StatusBar } from "expo-status-bar";
 import { NavigationContainer } from "@react-navigation/native";
+import { BookmarkProvider } from "../context/BookmarkContext";
 
 const index = () => {
   // const [fontsLoaded, error] = useFonts({
@@ -31,7 +32,9 @@ const index = () => {
   return (
     <SafeAreaProvider>
       <AuthProvider>
-        <AppNavigator />
+        <BookmarkProvider>
+          <AppNavigator />
+        </BookmarkProvider>
       </AuthProvider>
       <StatusBar style="auto" />
     </SafeAreaProvider>
