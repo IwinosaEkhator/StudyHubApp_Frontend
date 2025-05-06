@@ -12,6 +12,9 @@ import CategoryScreen from "../app/library/categoryScreen";
 import ProfileScreen from "../app/profile/profileScreen";
 import BookmarksScreen from "../app/library/bookmarkScreen";
 import EditProfileScreen from "../app/profile/editProfileScreen";
+import ChatListScreen from "../app/chat/chatListScreen";
+import AddPeopleScreen from "../app/chat/addPeopleScreen";
+import ChatScreen from "../app/chat/chatScreen";
 
 const Stack = createStackNavigator();
 
@@ -44,6 +47,12 @@ export default function AppNavigator() {
         <Stack.Screen name="Profile" component={ProfileScreen} />
         <Stack.Screen name="EditProfile" component={EditProfileScreen} />
         <Stack.Screen name="Bookmark" component={BookmarksScreen} />
+
+        {/* Chat Screens */}
+        <Stack.Screen name="ChatList" component={ChatListScreen} />
+        <Stack.Screen name="AddPeople" component={AddPeopleScreen} />
+        <Stack.Screen name="Chat" component={ChatScreen} />
+
       </Stack.Navigator>
     </>
   );

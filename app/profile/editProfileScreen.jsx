@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   Alert,
   ScrollView,
+  SafeAreaView,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { AuthContext } from "../../context/AuthContext";
@@ -21,14 +22,15 @@ import ScanIcon from "../../components/icons/ScanIcon";
 import PhotoIcon from "../../components/icons/PhotoIcon";
 import TrashIcon from "../../components/icons/TrashIcon";
 import axios from "axios";
+import CustomButton from "../../components/CustomButton";
 
 export default function EditProfileScreen({ navigation }) {
   const { user, accessToken, setUser } = useContext(AuthContext);
 
   const [name, setName] = useState(user?.name || "");
   const [email, setEmail] = useState(user?.email || "");
-//   const [photo, setPhoto] = useState(null);
-  const [loading, setLoading] = useState(false);
+  //   const [photo, setPhoto] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   const photoSheetRef = useRef();
   const [profile, setProfile] = useState(null);
@@ -211,15 +213,6 @@ export default function EditProfileScreen({ navigation }) {
     const form = new FormData();
     form.append("name", name);
     form.append("email", email);
-    if (photo) {
-      const uri = photo.uri;
-      const ext = uri.split(".").pop();
-      form.append("profile_photo", {
-        uri,
-        name: `photo.${ext}`,
-        type: `image/${ext}`,
-      });
-    }
 
     try {
       const resp = await fetch(API_ENDPOINTS.profileUpdate, {
@@ -256,119 +249,126 @@ export default function EditProfileScreen({ navigation }) {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.header}>Edit Profile</Text>
+    <SafeAreaView style={styles.safeArea}>
+      <ScrollView contentContainerStyle={styles.container}>
+        <Text style={styles.header}>Edit Profile</Text>
 
-      <View>
-        {/* Display profile photo if available, otherwise show default */}
-        {profile.profile_photo ? (
-          <Image
-            source={{
-              uri: `${API_ENDPOINTS.profile_photo_base_url}/storage/${profile.profile_photo}`,
-            }}
-            style={styles.profileImage}
-          />
-        ) : (
-          <DefaultProfileIcon style={styles.profileImage} />
-        )}
-        <TouchableOpacity
-          onPress={() => photoSheetRef.current.open()}
-          style={styles.cameraBox}
-        >
-          <CameraIcon styles={styles} />
-        </TouchableOpacity>
-      </View>
-
-      <Text style={styles.label}>Name</Text>
-      <TextInput
-        value={name}
-        onChangeText={setName}
-        style={styles.input}
-        placeholder="Your name"
-      />
-
-      <Text style={styles.label}>Email</Text>
-      <TextInput
-        value={email}
-        onChangeText={setEmail}
-        style={styles.input}
-        placeholder="you@example.com"
-        keyboardType="email-address"
-      />
-
-      <TouchableOpacity
-        style={styles.saveButton}
-        onPress={handleSave}
-        disabled={loading}
-      >
-        {loading ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={styles.saveButtonText}>Save Changes</Text>
-        )}
-      </TouchableOpacity>
-
-      <RBSheet
-        ref={photoSheetRef}
-        closeOnDragDown={true}
-        closeOnPressMask={true}
-        customStyles={{
-          wrapper: { backgroundColor: "rgba(0,0,0,0.5)" },
-          container: {
-            paddingVertical: 20,
-            paddingHorizontal: 30,
-            borderTopLeftRadius: 20,
-            borderTopRightRadius: 20,
-            height: 300,
-          },
-          draggableIcon: { backgroundColor: "#000" },
-        }}
-      >
-        <View style={styles.sheetHeader}>
-          <Text></Text>
-          <Text style={styles.sheetTitle}>Change Photo</Text>
-          <TouchableOpacity onPress={() => photoSheetRef.current.close()}>
-            <ClearIcon style={{ width: 24, height: 24 }} />
-          </TouchableOpacity>
+        <View style={styles.photoContainer}>
+          <View>
+            {/* Display profile photo if available, otherwise show default */}
+            {profile.profile_photo ? (
+              <Image
+                source={{
+                  uri: `${API_ENDPOINTS.profile_photo_base_url}/storage/${profile.profile_photo}`,
+                }}
+                style={styles.profileImage}
+              />
+            ) : (
+              <DefaultProfileIcon style={styles.profileImage} />
+            )}
+            <TouchableOpacity
+              onPress={() => photoSheetRef.current.open()}
+              style={styles.cameraBox}
+            >
+              <CameraIcon styles={styles} />
+            </TouchableOpacity>
+          </View>
         </View>
-        <TouchableOpacity
-          style={[styles.photoActionButton, { backgroundColor: "#000" }]}
-          onPress={handleTakePhoto}
+
+        <Text style={styles.label}>Name</Text>
+        <TextInput
+          value={profile.username}
+          onChangeText={setName}
+          style={styles.input}
+          placeholder="Your name"
+        />
+
+        <Text style={styles.label}>Email</Text>
+        <TextInput
+          value={profile.email}
+          onChangeText={setEmail}
+          style={styles.input}
+          placeholder="you@example.com"
+          keyboardType="email-address"
+        />
+        <View style={{ position: "absolute", bottom: 10, left: 10, right: 10}}>
+          <CustomButton
+            title="Save Changes"
+            containerStyles={styles.saveButton}
+            textAlign={styles.saveButtonText}
+            handlePress={handleSave}
+            loading={loading}
+          />
+        </View>
+
+        <RBSheet
+          ref={photoSheetRef}
+          closeOnDragDown={true}
+          closeOnPressMask={true}
+          customStyles={{
+            wrapper: { backgroundColor: "rgba(0,0,0,0.5)" },
+            container: {
+              paddingVertical: 20,
+              paddingHorizontal: 30,
+              borderTopLeftRadius: 20,
+              borderTopRightRadius: 20,
+              height: 300,
+            },
+            draggableIcon: { backgroundColor: "#000" },
+          }}
         >
-          <View style={[styles.photoActionIcon, { backgroundColor: "#fff" }]}>
-            <ScanIcon />
+          <View style={styles.sheetHeader}>
+            <Text></Text>
+            <Text style={styles.sheetTitle}>Change Photo</Text>
+            <TouchableOpacity onPress={() => photoSheetRef.current.close()}>
+              <ClearIcon style={{ width: 24, height: 24 }} />
+            </TouchableOpacity>
           </View>
-          <Text style={[styles.photoActionText, { color: "#fff" }]}>
-            Take New Photo
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.photoActionButton}
-          onPress={handleChoosePhoto}
-        >
-          <View style={styles.photoActionIcon}>
-            <PhotoIcon />
-          </View>
-          <Text style={styles.photoActionText}>Choose Existing Photo</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.photoActionButton}
-          onPress={handleDeletePhoto}
-        >
-          <View style={styles.photoActionIcon}>
-            <TrashIcon />
-          </View>
-          <Text style={[styles.photoActionText]}>Delete Photo</Text>
-        </TouchableOpacity>
-      </RBSheet>
-    </ScrollView>
+          <TouchableOpacity
+            style={[styles.photoActionButton, { backgroundColor: "#000" }]}
+            onPress={handleTakePhoto}
+          >
+            <View style={[styles.photoActionIcon, { backgroundColor: "#fff" }]}>
+              <ScanIcon />
+            </View>
+            <Text style={[styles.photoActionText, { color: "#fff" }]}>
+              Take New Photo
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.photoActionButton}
+            onPress={handleChoosePhoto}
+          >
+            <View style={styles.photoActionIcon}>
+              <PhotoIcon />
+            </View>
+            <Text style={styles.photoActionText}>Choose Existing Photo</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.photoActionButton}
+            onPress={handleDeletePhoto}
+          >
+            <View style={styles.photoActionIcon}>
+              <TrashIcon />
+            </View>
+            <Text style={[styles.photoActionText]}>Delete Photo</Text>
+          </TouchableOpacity>
+        </RBSheet>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: "#FFF",
+    height: "100%"
+  },
   container: {
     padding: 20,
     backgroundColor: "#fff",
+    height: "100%"
   },
   header: {
     fontSize: 24,
@@ -377,13 +377,23 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   photoContainer: {
-    alignSelf: "center",
+    flexDirection: "row",
+    justifyContent: "center",
     marginBottom: 10,
+    width: "100%",
   },
-  photo: {
+  profileImage: {
     width: 120,
     height: 120,
     borderRadius: 60,
+  },
+  cameraBox: {
+    padding: 7,
+    backgroundColor: "#000",
+    borderRadius: 20,
+    position: "absolute",
+    bottom: 6,
+    right: 0,
   },
   photoPlaceholder: {
     backgroundColor: "#eee",
@@ -423,7 +433,7 @@ const styles = StyleSheet.create({
   },
   saveButton: {
     marginTop: 30,
-    backgroundColor: "#28a745",
+    backgroundColor: "#000",
     paddingVertical: 14,
     borderRadius: 6,
     alignItems: "center",

@@ -16,6 +16,9 @@ import HomeIcon from "../components/icons/HomeIcon";
 import ProfileIcon from "../components/icons/ProfileIcon";
 import UploadBookScreen from "../app/books/upload";
 import AddCircleIcon from "../components/icons/AddCircleIcon";
+import ChatListScreen from "../app/chat/chatListScreen";
+import ChatIcon from "../components/icons/ChatIcon";
+import ChatScreen from "../app/chat/chatScreen";
 
 const Tab = createBottomTabNavigator();
 
@@ -63,6 +66,21 @@ export default function App() {
             <HomeIcon
               fill={focused ? "#FFF" : "rgba(0, 0, 0, 0.5)"}
               style={styles.icon}
+            />
+          ),
+        }}
+      />
+
+      <Tab.Screen
+        name="Chat"
+        component={ChatScreen}
+        options={{
+          tabBarLabel: "Chat",
+          tabBarIcon: ({ focused }) => (
+            <ChatIcon
+              fill={focused ? "#FFF" : "rgba(0, 0, 0, 0.5)"}
+              style={styles.icon}
+              stroke={focused ? "#FFF" : "rgba(0, 0, 0, 0.5)"}
             />
           ),
         }}

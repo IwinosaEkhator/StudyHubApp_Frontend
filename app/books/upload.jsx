@@ -63,46 +63,92 @@ export default function UploadBookScreen() {
   };
 
   const handleSubmit = async () => {
-    if (!title || !file) return Alert.alert("Title & file are required");
+    if (!title || !file) {
+      return Alert.alert("Title & file are required");
+    }
+
     setLoading(true);
+
+    // 1) Simple reachability test with fetch()
+    try {
+      console.log("▶️ Testing GET:", API_ENDPOINTS.books);
+      const test = await fetch(API_ENDPOINTS.books, { method: "GET" });
+      console.log("⬅️ Fetch status:", test.status);
+    } catch (e) {
+      console.error("❌ Fetch failed:", e);
+      Alert.alert(
+        "Network Error",
+        `Cannot reach API at:\n${API_ENDPOINTS.books}\n\nCheck that your Laravel server is running on 0.0.0.0:8000 and that your device/emulator can see that host.`
+      );
+      setLoading(false);
+      return;
+    }
+
+    // 2) Build FormData
     const form = new FormData();
     form.append("title", title);
     form.append("authors", authors);
     form.append("description", description);
     if (cover) {
-      const uriParts = cover.uri.split(".");
-      const ext = uriParts.pop();
+      const ext = cover.uri.split(".").pop();
       form.append("cover", {
         uri: cover.uri,
         name: `cover.${ext}`,
         type: `image/${ext}`,
       });
     }
-    // document
     form.append("file", {
       uri: file.uri,
       name: file.name,
       type: file.mimeType,
     });
 
+    // 3) Try Axios POST
     try {
+      console.log("▶️ Axios POST to:", API_ENDPOINTS.books);
       const resp = await axios.post(API_ENDPOINTS.books, form, {
         headers: {
-          "Content-Type": "multipart/form-data",
+          // NOTE: Do NOT manually set Content‑Type; Axios will do it for FormData
           Authorization: `Bearer ${accessToken}`,
         },
       });
+      console.log("⬅️ Axios response:", resp.data);
       Alert.alert("Success", resp.data.message);
-      // clear form or navigate
-    } catch (err) {
-      console.error(err);
-      Alert.alert("Error", err.response?.data?.message || err.message);
+      // Optionally clear form or navigate
+      setTitle("");
+      setAuthors("");
+      setDescription("");
+      setCover(null);
+      setFile(null);
+    } catch (axiosErr) {
+      console.error(
+        "❌ Axios error:",
+        axiosErr.toJSON ? axiosErr.toJSON() : axiosErr
+      );
+      // 4) Fallback: try with fetch multipart
+      try {
+        console.log("▶️ Fallback fetch POST");
+        const fetchResp = await fetch(API_ENDPOINTS.books, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            // do NOT set Content-Type
+          },
+          body: form,
+        });
+        const data = await fetchResp.json();
+        console.log("⬅️ Fetch POST response:", data);
+        if (!fetchResp.ok) throw new Error(data.message || "Upload failed");
+        Alert.alert("Success (via fetch)", data.message);
+      } catch (fetchErr) {
+        console.error("❌ Fetch POST error:", fetchErr);
+        Alert.alert("Upload Error", fetchErr.message);
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  
   return (
     <View style={s.container}>
       <Text style={s.label}>Title*</Text>
