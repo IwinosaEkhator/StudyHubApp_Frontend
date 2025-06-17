@@ -1,153 +1,249 @@
-// ChatScreen.js
-import React, { useState, useRef } from "react";
+// screens/chat/ChatScreen.js
+import React, { useState, useEffect, useContext } from "react";
 import {
   View,
   Text,
   FlatList,
   TouchableOpacity,
   TextInput,
-  StyleSheet,
   SafeAreaView,
   Image,
+  Modal,
+  Pressable,
+  Alert,
+  ActivityIndicator,
+  StyleSheet,
 } from "react-native";
-import { Audio } from "expo-av";
+import * as ImagePicker from "react-native-image-picker";
+import * as DocumentPicker from "expo-document-picker";
+
 import icons from "../../constants/icons";
 import InfoIcon from "../../components/icons/InfoIcon";
-import PlayIcon from "../../components/icons/PlayIcon";
 import AddCircleOutlineIcon from "../../components/icons/AddCircleOutlineIcon";
 import SendIcon from "../../components/icons/SendIcon";
+import { AuthContext } from "../../context/AuthContext";
+import useEcho from "../../context/useEcho";
+import { fetchMessages, sendMessage } from "../../api/chatService";
 
-const initialMessages = [
-  {
-    id: "1",
-    fromMe: false,
-    text: "I'm meeting a friend here for dinner. How about you? 😊",
-    time: "5:30",
-  },
-  {
-    id: "2",
-    fromMe: false,
-    voice: require("../../assets/sounds/New Composition #1.mp3"),
-    duration: "01:23",
-    time: "5:45",
-  },
-  {
-    id: "3",
-    fromMe: true,
-    text: "I'm doing my homework, but I really need to take a break.",
-    time: "5:48",
-  },
-  {
-    id: "4",
-    fromMe: false,
-    text:
-      "On my way home but I needed to stop by the book store to buy a text book. 😎",
-    time: "5:58",
-  },
-];
+export default function ChatScreen({ route, navigation }) {
+  const { conversationId, otherUser } = route.params;
+  const { user } = useContext(AuthContext);
+  const echo = useEcho();
 
-export default function ChatScreen({ navigation }) {
-  const [messages, setMessages] = useState(initialMessages);
+  const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
-  const soundRef = useRef(new Audio.Sound());
+  const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
 
-  // play a voice message
-  const handlePlayPause = async (voice) => {
+  // preview step state
+  const [pendingAsset, setPendingAsset] = useState(null);
+  // pendingAsset = { field: "image"|"video"|… , asset: {uri, name, type} }
+
+  // fetch history + subscribe
+  useEffect(() => {
+    let mounted = true;
+    fetchMessages(conversationId)
+      .then((data) => mounted && setMessages(data))
+      .catch(console.error)
+      .finally(() => mounted && setLoading(false));
+
+    const channel = echo
+      .channel(`chat.${conversationId}`)
+      .listen(".message.sent", (e) =>
+        setMessages((prev) => [...prev, e.message])
+      );
+
+    return () => {
+      mounted = false;
+      echo.leaveChannel(`chat.${conversationId}`);
+    };
+  }, [conversationId]);
+
+  // send text
+  const sendText = async () => {
+    if (!input.trim() || sending) return;
+    const body = input.trim();
+    setInput("");
+    setSending(true);
+
+    const tempId = Date.now().toString();
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: tempId,
+        user_id: user.id,
+        body,
+        created_at: new Date().toISOString(),
+        user,
+      },
+    ]);
+
     try {
-      const status = await soundRef.current.getStatusAsync();
-      if (status.isPlaying) {
-        await soundRef.current.pauseAsync();
-      } else {
-        await soundRef.current.unloadAsync();
-        await soundRef.current.loadAsync(voice);
-        await soundRef.current.playAsync();
-      }
-    } catch (e) {
-      console.error(e);
+      const saved = await sendMessage(conversationId, body, {});
+      setMessages((prev) => prev.map((m) => (m.id === tempId ? saved : m)));
+    } catch (err) {
+      console.error(err);
+      Alert.alert("Error", "Could not send message");
+      setMessages((prev) => prev.filter((m) => m.id !== tempId));
+    } finally {
+      setSending(false);
     }
   };
 
+  // send attachment after preview
+  const commitAttachment = async () => {
+    if (!pendingAsset || sending) return;
+    const { field, asset } = pendingAsset;
+    setSending(true);
+    setPendingAsset(null);
+
+    const tempId = Date.now().toString();
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: tempId,
+        user_id: user.id,
+        [field]: asset,
+        created_at: new Date().toISOString(),
+        user,
+      },
+    ]);
+
+    try {
+      const saved = await sendMessage(conversationId, "", { [field]: asset });
+      setMessages((prev) => prev.map((m) => (m.id === tempId ? saved : m)));
+    } catch (err) {
+      console.error(err);
+      Alert.alert("Error", "Could not send attachment");
+      setMessages((prev) => prev.filter((m) => m.id !== tempId));
+    } finally {
+      setSending(false);
+    }
+  };
+
+  // picking functions
+  const pickImage = async () => {
+    const res = await ImagePicker.launchImageLibrary({ mediaType: "photo" });
+    if (res.didCancel || !res.assets?.length) return null;
+    const a = res.assets[0];
+    return { uri: a.uri, fileName: a.fileName, type: a.type };
+  };
+  const pickVideo = async () => {
+    const res = await ImagePicker.launchImageLibrary({ mediaType: "video" });
+    if (res.didCancel || !res.assets?.length) return null;
+    const a = res.assets[0];
+    return { uri: a.uri, fileName: a.fileName, type: a.type };
+  };
+  const pickDocument = async () => {
+    const res = await DocumentPicker.getDocumentAsync({ type: "*/*" });
+    return res.type === "success"
+      ? { uri: res.uri, name: res.name, type: res.mimeType }
+      : null;
+  };
+
+  // open + menu
+  const openMenu = () => {
+    setPendingAsset({ field: "__MENU__", asset: null });
+  };
+  const onMenuSelect = async (option) => {
+    setPendingAsset(null); // close menu stub
+    if (sending) return;
+    let asset = null;
+    switch (option) {
+      case "Photo":
+        asset = await pickImage();
+        asset && setPendingAsset({ field: "image", asset });
+        break;
+      case "Video":
+        asset = await pickVideo();
+        asset && setPendingAsset({ field: "video", asset });
+        break;
+      case "Audio":
+        asset = await pickDocument();
+        asset &&
+          asset.type.startsWith("audio") &&
+          setPendingAsset({ field: "audio", asset });
+        break;
+      case "File":
+        asset = await pickDocument();
+        asset && setPendingAsset({ field: "file", asset });
+        break;
+      case "Link Book":
+        Alert.prompt(
+          "Link a Book",
+          "Paste Google Books URL",
+          (url) => url && setPendingAsset({ field: "book_link", asset: url }),
+          "plain-text"
+        );
+        break;
+      default:
+        break;
+    }
+  };
+
+  // render message
   const renderItem = ({ item }) => {
-    const bubbleStyle = item.fromMe ? styles.bubbleMe : styles.bubbleThem;
-    const textStyle = item.fromMe ? styles.textMe : styles.textThem;
+    const me = item.user_id === user.id;
     return (
-      <View
-        style={[
-          styles.messageRow,
-          item.fromMe && { justifyContent: "flex-end" },
-        ]}
-      >
-        <View style={[styles.bubble, bubbleStyle]}>
-          {item.text && <Text style={textStyle}>{item.text}</Text>}
-          {item.voice && (
-            <TouchableOpacity
-              style={styles.voiceContainer}
-              onPress={() => handlePlayPause(item.voice)}
-            >
-              <PlayIcon fill={item.fromMe ? "#fff" : "#000"} />
-              <Text style={[styles.voiceDuration, textStyle]}>
-                {item.duration}
-              </Text>
-            </TouchableOpacity>
+      <View style={[styles.messageRow, me && { justifyContent: "flex-end" }]}>
+        <View style={[styles.bubble, me ? styles.bubbleMe : styles.bubbleThem]}>
+          {item.body && (
+            <Text style={me ? styles.textMe : styles.textThem}>
+              {item.body}
+            </Text>
           )}
-          <Text
-            style={[styles.time, item.fromMe ? styles.timeMe : styles.timeThem]}
-          >
-            {item.time}
+          {item.image && (
+            <Image
+              source={{ uri: item.image.uri }}
+              style={{ width: 120, height: 80, marginTop: 6 }}
+            />
+          )}
+          {item.video && <Text>🎬 Video</Text>}
+          {item.audio && <Text>🎵 Audio</Text>}
+          {item.file && <Text>📎 File</Text>}
+          {item.book_link && (
+            <Text style={{ color: "#06c" }}>📖 {item.book_link}</Text>
+          )}
+          <Text style={[styles.time, me ? styles.timeMe : styles.timeThem]}>
+            {new Date(item.created_at).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
           </Text>
         </View>
       </View>
     );
   };
 
-  const handleSend = () => {
-    if (!input.trim()) return;
-    setMessages([
-      ...messages,
-      {
-        id: Date.now().toString(),
-        fromMe: true,
-        text: input,
-        time: new Date().toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-      },
-    ]);
-    setInput("");
-  };
-
   return (
     <SafeAreaView style={styles.container}>
-      {/* Custom header */}
+      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Image
             source={icons.blackArrowBack}
-            style={{ height: 24, width: 24 }}
+            style={{ width: 24, height: 24 }}
           />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Shane Martinez</Text>
-        <TouchableOpacity
-          onPress={() => {
-            /* info action */
-          }}
-        >
-          <InfoIcon />
-        </TouchableOpacity>
+        <Text style={styles.headerTitle}>{otherUser.username}</Text>
+        <InfoIcon />
       </View>
 
-      {/* Messages */}
-      <FlatList
-        data={messages}
-        keyExtractor={(m) => m.id}
-        renderItem={renderItem}
-        contentContainerStyle={styles.messagesList}
-      />
+      {/* Messages or loading */}
+      {loading ? (
+        <ActivityIndicator style={{ flex: 1 }} size="large" />
+      ) : (
+        <FlatList
+          data={messages}
+          keyExtractor={(m) => m.id.toString()}
+          renderItem={renderItem}
+          contentContainerStyle={styles.messagesList}
+        />
+      )}
 
-      {/* Input bar */}
+      {/* Input row */}
       <View style={styles.inputRow}>
-        <TouchableOpacity>
+        <TouchableOpacity onPress={openMenu} disabled={sending}>
           <AddCircleOutlineIcon fill="black" />
         </TouchableOpacity>
         <TextInput
@@ -155,11 +251,89 @@ export default function ChatScreen({ navigation }) {
           placeholder="Message"
           value={input}
           onChangeText={setInput}
+          editable={!sending}
         />
-        <TouchableOpacity onPress={handleSend}>
-          <SendIcon />
+        <TouchableOpacity onPress={sendText} disabled={sending}>
+          {sending ? <ActivityIndicator /> : <SendIcon />}
         </TouchableOpacity>
       </View>
+
+      {/* + Menu */}
+      <Modal
+        visible={pendingAsset?.field === "__MENU__"}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setPendingAsset(null)}
+      >
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => setPendingAsset(null)}
+        >
+          <View style={styles.modal}>
+            {["Photo", "Video", "Audio", "File", "Link Book", "Cancel"].map(
+              (opt, i) => (
+                <TouchableOpacity
+                  key={i}
+                  style={styles.modalItem}
+                  onPress={() => onMenuSelect(opt)}
+                  disabled={sending}
+                >
+                  <Text
+                    style={[
+                      styles.modalText,
+                      opt === "Cancel" && { color: "red" },
+                    ]}
+                  >
+                    {opt}
+                  </Text>
+                </TouchableOpacity>
+              )
+            )}
+          </View>
+        </Pressable>
+      </Modal>
+
+      {/* Preview & Send */}
+      <Modal
+        visible={!!(pendingAsset && pendingAsset.field !== "__MENU__")}
+        transparent
+        animationType="fade"
+      >
+        <View style={styles.previewOverlay}>
+          <View style={styles.previewBox}>
+            {pendingAsset?.field === "image" && (
+              <Image
+                source={{ uri: pendingAsset.asset.uri }}
+                style={styles.previewImage}
+              />
+            )}
+            {pendingAsset?.field === "video" && <Text>🎬 Video selected</Text>}
+            {pendingAsset?.field === "audio" && (
+              <Text>🎵 {pendingAsset.asset.name}</Text>
+            )}
+            {pendingAsset?.field === "file" && (
+              <Text>📎 {pendingAsset.asset.name}</Text>
+            )}
+            {pendingAsset?.field === "book_link" && (
+              <Text style={{ color: "#06c" }}>📖 {pendingAsset.asset}</Text>
+            )}
+            <View style={styles.previewButtons}>
+              <TouchableOpacity
+                style={styles.cancelBtn}
+                onPress={() => setPendingAsset(null)}
+              >
+                <Text>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.sendBtn}
+                onPress={commitAttachment}
+              >
+                <Text style={{ color: "white" }}>Send</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -172,41 +346,28 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     padding: 12,
     paddingTop: 20,
-    marginBottom: 20,
-    // borderBottomWidth: 1,
-    // borderColor: "#ddd",
-    // backgroundColor: "#fff",
+    backgroundColor: "#fff",
   },
   headerTitle: { fontSize: 18, fontWeight: "600" },
-  messagesList: {
-    padding: 12,
-    paddingTop: 45,
-    borderTopLeftRadius: 60,
-    borderTopRightRadius: 60,
-    backgroundColor: "#fff",
-    height: "100%"
-  },
-  messageRow: { flexDirection: "row", marginVertical: 9 },
-  bubble: {
-    maxWidth: "75%",
-    padding: 10,
-    borderRadius: 16,
-    position: "relative",
-  },
+  messagesList: { padding: 12, flexGrow: 1 },
+  messageRow: { flexDirection: "row", marginVertical: 6 },
+  bubble: { maxWidth: "75%", padding: 10, borderRadius: 16 },
   bubbleMe: { backgroundColor: "#000", borderBottomRightRadius: 0 },
-  bubbleThem: { backgroundColor: "#fff", borderWidth: 1, borderBottomLeftRadius: 0 },
-  textMe: { color: "#fff", fontSize: 16 },
-  textThem: { color: "#000", fontSize: 16 },
+  bubbleThem: {
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderBottomLeftRadius: 0,
+  },
+  textMe: { color: "#fff" },
+  textThem: { color: "#000" },
   time: { fontSize: 10, marginTop: 4, alignSelf: "flex-end" },
   timeMe: { color: "#e0e0e0" },
   timeThem: { color: "#999" },
-  voiceContainer: { flexDirection: "row", alignItems: "center" },
-  voiceDuration: { marginLeft: 8 },
+
   inputRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 8,
-    paddingHorizontal: 15,
+    padding: 8,
     borderTopWidth: 1,
     borderColor: "#ddd",
     backgroundColor: "#fff",
@@ -214,9 +375,46 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     marginHorizontal: 8,
-    paddingVertical: 10,
     paddingHorizontal: 12,
+    paddingVertical: 8,
     backgroundColor: "#f9f9f9",
     borderRadius: 20,
   },
+
+  modalOverlay: {
+    flex: 1,
+    justifyContent: "flex-end",
+    backgroundColor: "rgba(0,0,0,0.3)",
+  },
+  modal: {
+    backgroundColor: "#fff",
+    padding: 16,
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
+  },
+  modalItem: { paddingVertical: 12 },
+  modalText: { fontSize: 18, textAlign: "center" },
+
+  previewOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  previewBox: {
+    width: "80%",
+    backgroundColor: "#fff",
+    padding: 16,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  previewImage: { width: 200, height: 120, marginBottom: 12 },
+  previewButtons: {
+    flexDirection: "row",
+    marginTop: 16,
+    width: "100%",
+    justifyContent: "space-between",
+  },
+  cancelBtn: { padding: 10 },
+  sendBtn: { padding: 10, backgroundColor: "#007AFF", borderRadius: 4 },
 });

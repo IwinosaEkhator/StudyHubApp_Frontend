@@ -15,6 +15,8 @@ import EditProfileScreen from "../app/profile/editProfileScreen";
 import ChatListScreen from "../app/chat/chatListScreen";
 import AddPeopleScreen from "../app/chat/addPeopleScreen";
 import ChatScreen from "../app/chat/chatScreen";
+import PostScreen from "../app/community/postScreen";
+import ShareInfoPage from "../app/library/shareInfoPage";
 
 const Stack = createStackNavigator();
 
@@ -51,8 +53,17 @@ export default function AppNavigator() {
         {/* Chat Screens */}
         <Stack.Screen name="ChatList" component={ChatListScreen} />
         <Stack.Screen name="AddPeople" component={AddPeopleScreen} />
-        <Stack.Screen name="Chat" component={ChatScreen} />
+        <Stack.Screen
+          name="ChatRoom"
+          component={ChatScreen}
+          options={({ route }) => ({
+            title: route.params.otherUser.username,
+          })}
+        />
 
+        {/* Community Screens */}
+        <Stack.Screen name="Posts" component={PostScreen} />
+        <Stack.Screen name="infoPage2" component={ShareInfoPage} />
       </Stack.Navigator>
     </>
   );

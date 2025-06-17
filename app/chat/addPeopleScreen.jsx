@@ -1,3 +1,4 @@
+import React, { useState, useEffect, useMemo, useContext } from "react";
 import {
   View,
   Text,
@@ -7,88 +8,24 @@ import {
   SectionList,
   TouchableOpacity,
   Image,
+  ActivityIndicator,
+  Alert,
 } from "react-native";
-import React, { useMemo, useState } from "react";
+import axios from "axios";
 import SearchBar from "../../components/SearchBar";
-import CustomButton from "../../components/CustomButton";
 import icons from "../../constants/icons";
+import API_ENDPOINTS, { API_BASE_URL } from "../../api/apiConfig"; // or wherever you keep it
+import { AuthContext } from "../../context/AuthContext";
+import DefaultProfileIcon from "../../components/icons/DefaultProfileIcon";
 
-const contactsData = [
-  {
-    id: "1",
-    name: "Andykan Akpan",
-    image: require("../../assets/images/Ellipse 4.png"),
-    letter: "A",
-  },
-  {
-    id: "2",
-    name: "Bale Waters",
-    image: require("../../assets/images/Ellipse 4.png"),
-    letter: "B",
-  },
-  {
-    id: "3",
-    name: "Ben Freeman",
-    image: require("../../assets/images/Ellipse 4.png"),
-    letter: "B",
-  },
-  {
-    id: "4",
-    name: "Captain Youth",
-    image: require("../../assets/images/Ellipse 4.png"),
-    letter: "C",
-  },
-  {
-    id: "5",
-    name: "Campbell Banner",
-    image: require("../../assets/images/Ellipse 4.png"),
-    letter: "C",
-  },
-  {
-    id: "6",
-    name: "Cassandra Bill",
-    image: require("../../assets/images/Ellipse 4.png"),
-    letter: "C",
-  },
-  {
-    id: "7",
-    name: "Danny Simmons",
-    image: require("../../assets/images/Ellipse 4.png"),
-    letter: "D",
-  },
-  {
-    id: "8",
-    name: "Edison Jamal",
-    image: require("../../assets/images/Ellipse 4.png"),
-    letter: "E",
-  },
-  {
-    id: "9",
-    name: "Gandhi Randi",
-    image: require("../../assets/images/Ellipse 4.png"),
-    letter: "G",
-  },
-  {
-    id: "10",
-    name: "Gordon Hayden",
-    image: require("../../assets/images/Ellipse 4.png"),
-    letter: "G",
-  },
-  // ... more contacts ...
-];
-
-function groupContactsByLetter(contacts) {
+// helper to group by first letter
+function groupByLetter(items) {
   const map = {};
-
-  contacts.forEach((contact) => {
-    const letter = contact.letter.toUpperCase();
-    if (!map[letter]) {
-      map[letter] = [];
-    }
-    map[letter].push(contact);
+  items.forEach((u) => {
+    const letter = (u.username[0] || "#").toUpperCase();
+    map[letter] = map[letter] || [];
+    map[letter].push(u);
   });
-
-  // Convert the map into an array of { title, data } for SectionList
   return Object.keys(map)
     .sort()
     .map((letter) => ({
@@ -97,75 +34,143 @@ function groupContactsByLetter(contacts) {
     }));
 }
 
-const AddPeopleScreen = ({ navigation }) => {
+export default function AddPeopleScreen({ navigation }) {
+  const [users, setUsers] = useState([]);
   const [searchText, setSearchText] = useState("");
-  const [selectedId, setSelectedId] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const { accessToken } = useContext(AuthContext);
+  const [sections, setSections] = useState([]);
 
-  // Filter & group the data each time searchText changes
-  const sections = useMemo(() => {
-    const lowerSearch = searchText.toLowerCase();
-    // Filter the contacts by name
-    const filtered = contactsData.filter((contact) =>
-      contact.name.toLowerCase().includes(lowerSearch)
+  // fetch all users on mount
+  // load users once
+  useEffect(() => {
+    (async () => {
+      try {
+        const resp = await axios.get(API_ENDPOINTS.users, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        setUsers(resp.data);
+      } catch (err) {
+        console.error("Failed to load users", err);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [accessToken]);
+
+  // group & filter whenever users or searchText change
+  useEffect(() => {
+    const filtered = users.filter((u) =>
+      u.username.toLowerCase().includes(searchText.toLowerCase())
     );
-    // Group them by letter
-    return groupContactsByLetter(filtered);
-  }, [searchText]);
+    const map = {};
+    filtered.forEach((u) => {
+      const letter = u.username[0].toUpperCase();
+      if (!map[letter]) map[letter] = [];
+      map[letter].push(u);
+    });
+    const secs = Object.keys(map)
+      .sort()
+      .map((letter) => ({
+        title: letter,
+        data: map[letter],
+      }));
+    setSections(secs);
+  }, [users, searchText]);
 
-  // Render each contact row
-  const renderItem = ({ item }) => {
-    const isSelected = item.id === selectedId;
+  // filter + group whenever users or searchText changes
+  // const sections = useMemo(() => {
+  //   const lower = searchText.toLowerCase();
+  //   const filtered = users.filter((u) =>
+  //     u.username.toLowerCase().includes(lower)
+  //   );
+  //   return groupByLetter(filtered);
+  // }, [users, searchText]);
 
-    if (isSelected) {
-      navigation.navigate("");
-    }
+  const renderItem = ({ item }) => (
+    <TouchableOpacity
+      style={styles.itemContainer}
+      onPress={async () => {
+        try {
+          // 1) create (or fetch) the 1:1 conversation
+          const resp = await axios.post(
+            API_ENDPOINTS.conversations,
+            { participant_id: item.id },
+            { headers: { Authorization: `Bearer ${accessToken}` } }
+          );
+          const { id: conversationId } = resp.data;
 
-    return (
-      <TouchableOpacity
-        style={styles.itemContainer}
-        onPress={() => setSelectedId(item.id)}
-      >
-        <Image source={item.image} style={styles.profileImage} />
-        <Text style={styles.nameText}>{item.name}</Text>
-      </TouchableOpacity>
-    );
-  };
+          // 2) navigate into the chat
+          navigation.navigate("ChatRoom", {
+            conversationId,
+            otherUser: {
+              id: item.id,
+              username: item.username,
+              profile_photo: item.profile_photo,
+            },
+          });
+        } catch (err) {
+          console.error("Could not start conversation", err);
+          Alert.alert("Error", "Unable to start chat. Please try again.");
+        }
+      }}
+    >
+      {item.profile_photo ? (
+        <Image
+          source={{
+            uri: `${API_ENDPOINTS.profile_photo_base_url}/storage/${item.profile_photo}`,
+          }}
+          style={styles.profileImage}
+        />
+      ) : (
+        <DefaultProfileIcon style={styles.profileImage} />
+      )}
+      <Text style={styles.nameText}>{item.username}</Text>
+    </TouchableOpacity>
+  );
 
-  // Render the letter header (A, B, C, etc.)
   const renderSectionHeader = ({ section: { title } }) => (
     <Text style={styles.sectionHeader}>{title}</Text>
   );
 
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <ActivityIndicator size="large" style={{ marginTop: 50 }} />
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
+        {/* header */}
         <View style={styles.headerRow}>
           <TouchableOpacity onPress={() => navigation.goBack()}>
             <Image
               source={icons.blackArrowBack}
               style={styles.backIcon}
-              resizeMethod="contain"
+              resizeMode="contain"
             />
           </TouchableOpacity>
           <Text style={styles.header}>Start New Chat</Text>
         </View>
 
-        {/* Search Bar */}
+        {/* search */}
         <SearchBar searchText={searchText} setSearchText={setSearchText} />
 
-        {/* Alphabetically Grouped List */}
+        {/* list */}
         <SectionList
           sections={sections}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item) => item.id.toString()}
           renderSectionHeader={renderSectionHeader}
           renderItem={renderItem}
-          // stickySectionHeadersEnabled
           showsVerticalScrollIndicator={false}
         />
       </View>
     </SafeAreaView>
   );
-};
+}
 
 const styles = StyleSheet.create({
   safeArea: {
@@ -174,20 +179,23 @@ const styles = StyleSheet.create({
     paddingTop: Platform.OS === "android" ? 20 : 0,
   },
   container: {
-    width: "100%",
-    height: "100%",
-    backgroundColor: "#FFF",
+    flex: 1,
     paddingHorizontal: 20,
   },
-  headerRow: { flexDirection: "row", alignItems: "center", paddingBottom: 18 },
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+  },
   backIcon: { width: 24, height: 24 },
   header: { fontSize: 22, fontWeight: "bold", marginLeft: 12 },
   sectionHeader: {
     fontSize: 16,
     fontWeight: "600",
-    marginVertical: 6,
-    color: "#000",
-    opacity: 0.5,
+    marginTop: 12,
+    marginBottom: 4,
+    color: "#333",
+    opacity: 0.6,
   },
   itemContainer: {
     flexDirection: "row",
@@ -198,31 +206,11 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "#eee", // fallback if no image
-    marginRight: 10,
+    backgroundColor: "#eee",
+    marginRight: 12,
   },
   nameText: {
     fontSize: 16,
-    fontWeight: 600,
-    flex: 1, // let name take up remaining space
-  },
-  radioOuter: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: "#333",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
-  inActiveNextButton: {
-    backgroundColor: "#000",
-    borderRadius: 15,
-    paddingVertical: 18,
-    alignItems: "center",
-    opacity: 0.5,
+    fontWeight: "500",
   },
 });
-
-export default AddPeopleScreen;

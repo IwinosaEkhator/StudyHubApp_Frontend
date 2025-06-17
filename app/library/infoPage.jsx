@@ -10,9 +10,13 @@ const InfoPage = ({ route, navigation }) => {
   const book = route?.params?.book;
   // const bookData = book ? JSON.parse(book) : null;
 
-  // if (!bookData) {
-  //   return <Text>No book details available.</Text>;
-  // }
+  if (!book) {
+    return (
+      <View style={{ flex:1, justifyContent:"center", alignItems:"center" }}>
+        <Text>No book data provided.</Text>
+      </View>
+    );
+  }
 
   const {
     title,
@@ -20,7 +24,7 @@ const InfoPage = ({ route, navigation }) => {
     averageRating,
     pageCount,
     description,
-    imageLinks,
+    imageLinks = {},
     language,
     previewLink
   } = book.volumeInfo;

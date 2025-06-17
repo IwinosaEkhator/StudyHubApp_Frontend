@@ -165,11 +165,11 @@ export default function UploadBookScreen() {
 
       {cover && <Image source={{ uri: cover.uri }} style={s.coverPreview} />}
       <TouchableOpacity style={s.btn} onPress={pickCover}>
-        <Text style={s.btnText}>{cover ? "Change Cover" : "Pick Cover"}</Text>
+        <Text className="text-black font-semibold">{cover ? "Change Cover" : "Pick Cover"}</Text>
       </TouchableOpacity>
 
       <TouchableOpacity style={s.btn} onPress={pickFile}>
-        <Text style={s.btnText}>{file ? file.name : "Pick PDF/EPUB"}</Text>
+        <Text className="text-black font-semibold">{file ? file.name : "Pick PDF/EPUB"}</Text>
       </TouchableOpacity>
 
       <TouchableOpacity
@@ -200,11 +200,14 @@ const s = StyleSheet.create({
   btn: {
     marginTop: 15,
     padding: 12,
-    backgroundColor: "#007bff",
+    // backgroundColor: "#fff",
     borderRadius: 5,
+    borderColor: "#000",
+    borderWidth: 2,
+    color: "#000",
     alignItems: "center",
   },
-  submit: { backgroundColor: "#28a745" },
+  submit: { backgroundColor: "#000" },
   btnText: { color: "#fff", fontWeight: "600" },
   coverPreview: { width: 100, height: 150, marginTop: 10, borderRadius: 5 },
 });

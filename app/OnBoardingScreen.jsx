@@ -43,8 +43,8 @@ export default function OnboardingScreen({ navigation }) {
     <SafeAreaView style={styles.container}>
       <Swiper
         loop={false}
-        // autoplay
-        // autoplayTimeout={3}
+        autoplay
+        autoplayTimeout={3}
         activeDotColor="#007bff"
         dotStyle={styles.dot}
         activeDotStyle={styles.activeDot}

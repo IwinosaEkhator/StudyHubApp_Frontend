@@ -19,6 +19,8 @@ import AddCircleIcon from "../components/icons/AddCircleIcon";
 import ChatListScreen from "../app/chat/chatListScreen";
 import ChatIcon from "../components/icons/ChatIcon";
 import ChatScreen from "../app/chat/chatScreen";
+import PostScreen from "../app/community/postScreen";
+import CommunityIcon from "../components/icons/CommunityIcon";
 
 const Tab = createBottomTabNavigator();
 
@@ -73,7 +75,7 @@ export default function App() {
 
       <Tab.Screen
         name="Chat"
-        component={ChatScreen}
+        component={ChatListScreen}
         options={{
           tabBarLabel: "Chat",
           tabBarIcon: ({ focused }) => (
@@ -93,6 +95,20 @@ export default function App() {
           tabBarLabel: "Upload",
           tabBarIcon: ({ focused }) => (
             <AddCircleIcon
+              fill={focused ? "#FFF" : "rgba(0, 0, 0, 0.5)"}
+              style={styles.icon}
+            />
+          ),
+        }}
+      />
+
+      <Tab.Screen
+        name="Community"
+        component={PostScreen}
+        options={{
+          tabBarLabel: "Connect",
+          tabBarIcon: ({ focused }) => (
+            <CommunityIcon
               fill={focused ? "#FFF" : "rgba(0, 0, 0, 0.5)"}
               style={styles.icon}
             />

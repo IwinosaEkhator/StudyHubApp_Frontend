@@ -251,13 +251,13 @@ export default function ProfileScreen({ navigation }) {
     );
   }
 
-  if (!profile) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <Text style={styles.errorText}>Error loading profile.</Text>
-      </SafeAreaView>
-    );
-  }
+  // if (!profile) {
+  //   return (
+  //     <SafeAreaView style={styles.safeArea}>
+  //       <Text style={styles.errorText}>Error loading profile.</Text>
+  //     </SafeAreaView>
+  //   );
+  // }
 
   // Log Out
   const handleLogout = async () => {

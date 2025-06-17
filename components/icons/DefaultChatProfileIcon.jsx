@@ -1,9 +1,8 @@
 import React from 'react';
 import Svg, { Rect, Path } from 'react-native-svg';
 
-const DefaultProfileIcon = (props) => (
-  <Svg viewBox="0 0 100 100" fill="none" {...props}>
-    <Rect width="100" height="100" rx="50" fill="#D9D9D9" />
+const DefaultChatProfileIcon = (props) => (
+  <Svg width={100} height={100} viewBox="0 0 100 100" fill="none" {...props}>
     <Path
       d="M50.24 53.06C50.2 53.06 50.14 53.06 50.1 53.06C50.04 53.06 49.96 53.06 49.9 53.06C45.36 52.92 41.96 49.38 41.96 45.02C41.96 40.58 45.58 36.96 50.02 36.96C54.46 36.96 58.08 40.58 58.08 45.02C58.06 49.4 54.64 52.92 50.3 53.06C50.26 53.06 50.26 53.06 50.24 53.06ZM50 39.94C47.2 39.94 44.94 42.22 44.94 45C44.94 47.74 47.08 49.96 49.8 50.06C49.86 50.04 50.06 50.04 50.26 50.06C52.94 49.92 55.04 47.72 55.06 45C55.06 42.22 52.8 39.94 50 39.94Z"
       fill="#171717"
@@ -19,4 +18,4 @@ const DefaultProfileIcon = (props) => (
   </Svg>
 );
 
-export default DefaultProfileIcon;
+export default DefaultChatProfileIcon;
