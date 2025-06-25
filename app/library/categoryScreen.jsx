@@ -123,7 +123,7 @@ export default function CategoryScreen({ route, navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, backgroundColor: "#fff" },
+  container: { flex: 1, padding: 16, backgroundColor: "#fff", paddingTop: 40, },
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
   headerRow: { flexDirection: "row", alignItems: "center", paddingBottom: 18 },
   backIcon: { width: 24, height: 24 },

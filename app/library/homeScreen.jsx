@@ -11,14 +11,47 @@ import {
   Platform,
   ScrollView,
 } from "react-native";
-import React, { useEffect, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import icons from "../../constants/icons";
 import BooksType from "../../components/BooksType";
+import { AuthContext } from "../../context/AuthContext";
+import API_ENDPOINTS from "../../api/apiConfig";
 
 const HomeScreen = ({ navigation }) => {
+  const { user, accessToken } = useContext(AuthContext);
   const [books, setBooks] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+
+  
+  // New: load the user’s preferred subjects
+  const [subjects, setSubjects] = useState([]);
+  const [loadingSubjects, setLoadingSubjects] = useState(true);
+
+    useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch(
+          `${API_ENDPOINTS.users}/${user.id}/subjects`,
+          {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              Accept: "application/json",
+            },
+          }
+        );
+        if (!res.ok) throw new Error(res.status);
+        const data = await res.json();
+        // If your endpoint returns an array like [{ id, name }, …]
+        setSubjects(data.map((s) => s.name));
+      } catch (err) {
+        console.error("Failed to load user subjects:", err);
+        Alert.alert("Error", "Could not load your topics.");
+      } finally {
+        setLoadingSubjects(false);
+      }
+    })();
+  }, [user, accessToken]);
 
   // Use an effect to fetch books when searchQuery changes, with a debounce.
   useEffect(() => {
@@ -32,7 +65,6 @@ const HomeScreen = ({ navigation }) => {
 
     return () => clearTimeout(delayDebounceFn);
   }, [searchQuery]);
-  
 
   const fetchBooks = async (query) => {
     if (!query) return; // Don't fetch if query is empty
@@ -57,7 +89,7 @@ const HomeScreen = ({ navigation }) => {
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView>
-        <View className="flex-1 p-[20px] bg-white">
+        <View className="flex-1 p-[20px] bg-white" style={{ paddingTop: 40 }}>
           {/* Top Section */}
           <View className="flex-row justify-between items-center mb-4">
             <View className="flex-row items-center">
@@ -152,9 +184,29 @@ const HomeScreen = ({ navigation }) => {
           ) : (
             // Show categories when no search query is entered
             <>
-              <BooksType type="Science" navigation={navigation} />
+              {/* <BooksType type="Science" navigation={navigation} />
               <BooksType type="Mathematics" navigation={navigation} />
-              <BooksType type="English" navigation={navigation} />
+              <BooksType type="English" navigation={navigation} /> */}
+
+              <View style={styles.topicsContainer}>
+                {loadingSubjects ? (
+                  <ActivityIndicator size="small" color="#000" />
+                ) : subjects.length > 0 ? (
+                  subjects.map((topic) => (
+                    <BooksType
+                      key={topic}
+                      type={topic}
+                      navigation={navigation}
+                    />
+                  ))
+                ) : (
+                  <>
+                    <BooksType type="Science" navigation={navigation} />
+                    <BooksType type="Mathematics" navigation={navigation} />
+                    <BooksType type="English" navigation={navigation} />
+                  </>
+                )}
+              </View>
             </>
           )}
         </View>

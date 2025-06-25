@@ -279,7 +279,7 @@ export default function ProfileScreen({ navigation }) {
   return (
     <>
       <SafeAreaView style={styles.safeArea} classname="bg-white w-full h-full">
-        <View style={{ padding: 20 }}>
+        <View style={{ padding: 20, paddingTop: 40 }}>
           {/* Navigation Back */}
           <View style={styles.headerRow}>
             <View></View>

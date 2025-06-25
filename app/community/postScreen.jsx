@@ -44,6 +44,7 @@ export default function PostScreen({ navigation }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [suggestions, setSuggestions] = useState([]);
   const [selectedBook, setSelectedBook] = useState(null); // now array
+  const [searching, setSearching] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   // fetch feed on mount
@@ -63,8 +64,41 @@ export default function PostScreen({ navigation }) {
   }, []);
 
   // debounce Google Books search
+  // useEffect(() => {
+  //   if (searchQuery.length < 3) {
+  //     setSuggestions([]);
+  //     return;
+  //   }
+  //   const t = setTimeout(async () => {
+  //     try {
+  //       const res = await fetch(
+  //         `https://www.googleapis.com/books/v1/volumes?q=intitle:${encodeURIComponent(
+  //           searchQuery
+  //         )}&maxResults=5`
+  //       );
+  //       const json = await res.json();
+  //       // filter out any items lacking volumeInfo
+  //       const good = (json.items || []).filter((item) => item.volumeInfo);
+  //       setSuggestions(good);
+  //     } catch (e) {
+  //       console.error("Books search error:", e);
+  //     }
+  //   }, 500);
+  //   return () => clearTimeout(t);
+  // }, [searchQuery]);
+
+  // replace your existing useEffect for suggestions with this:
   useEffect(() => {
-    if (searchQuery.length < 3) return setSuggestions([]);
+    // any time the query changes...
+    if (searchQuery.length < 3) {
+      // too short → clear results & not searching
+      setSuggestions([]);
+      setSearching(false);
+      return;
+    }
+
+    // start a new lookup
+    setSearching(true);
     const t = setTimeout(async () => {
       try {
         const res = await fetch(
@@ -73,11 +107,18 @@ export default function PostScreen({ navigation }) {
           )}&maxResults=5`
         );
         const json = await res.json();
-        setSuggestions(json.items || []);
+        // only keep items that actually have volumeInfo
+        const good = (json.items || []).filter(
+          (it) => it && it.volumeInfo && typeof it.volumeInfo === "object"
+        );
+        setSuggestions(good);
       } catch (e) {
         console.error("Books search error:", e);
+      } finally {
+        setSearching(false);
       }
     }, 500);
+
     return () => clearTimeout(t);
   }, [searchQuery]);
 
@@ -363,39 +404,102 @@ export default function PostScreen({ navigation }) {
               value={searchQuery}
               onChangeText={(t) => {
                 setSearchQuery(t);
-                setSelectedBook([]);
+                // setSelectedBook([]);
               }}
             />
 
             {/* only render when we actually have suggestions */}
             {/* suggestions */}
-            {suggestions.length > 0 && (
+
+            {/* …below your TextInput for the search… */}
+            {searching ? (
+              <ActivityIndicator style={{ marginTop: 16 }} />
+            ) : searchQuery.length < 3 ? (
+              <Text style={{ marginTop: 16, color: "#666" }}>
+                Type at least 3 letters to search…
+              </Text>
+            ) : suggestions.length > 0 ? (
+              <FlatList
+                data={suggestions}
+                keyExtractor={(b) => b.id}
+                style={{ maxHeight: 200, marginTop: 8 }}
+                renderItem={({ item }) => {
+                  const info = item.volumeInfo || {};
+                  const thumb = info.imageLinks?.thumbnail || "";
+                  return (
+                    <TouchableOpacity
+                      style={styles.suggestionRow}
+                      onPress={() => {
+                        setSelectedBook(item);
+                        setSuggestions([]);
+                        setSearchQuery(info.title || "");
+                      }}
+                    >
+                      {thumb ? (
+                        <Image
+                          source={{ uri: thumb }}
+                          style={styles.suggestionThumb}
+                        />
+                      ) : (
+                        <View style={[styles.suggestionThumb, styles.noImage]}>
+                          <Text style={{ fontSize: 10, textAlign: "center" }}>
+                            No Image
+                          </Text>
+                        </View>
+                      )}
+                      <Text style={styles.suggestionText}>
+                        {info.title || "Untitled"}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                }}
+              />
+            ) : (
+              <Text style={{ marginTop: 16, color: "#666" }}>
+                No results found.
+              </Text>
+            )}
+
+            {/* {suggestions.length > 0 && (
               <FlatList
                 data={suggestions}
                 keyExtractor={(b) => b.id}
                 style={{ maxHeight: 200 }}
-                renderItem={({ item }) => (
-                  <TouchableOpacity
-                    style={styles.suggestionRow}
-                    onPress={() => {
-                      setSelectedBook(item);
-                      setSuggestions([]);
-                      setSearchQuery(item.volumeInfo.title);
-                    }}
-                  >
-                    {item.volumeInfo.imageLinks?.thumbnail && (
-                      <Image
-                        source={{ uri: item.volumeInfo.imageLinks.thumbnail }}
-                        style={styles.suggestionThumb}
-                      />
-                    )}
-                    <Text style={styles.suggestionText}>
-                      {item.volumeInfo.title}
-                    </Text>
-                  </TouchableOpacity>
-                )}
+                renderItem={({ item }) => {
+                  // make sure volumeInfo exists
+                  const info = item.volumeInfo || {};
+                  const thumbnail = info.imageLinks?.thumbnail;
+
+                  return (
+                    <TouchableOpacity
+                      style={styles.suggestionRow}
+                      onPress={() => {
+                        setSelectedBook(item);
+                        setSuggestions([]);
+                        setSearchQuery(info.title || "");
+                      }}
+                    >
+                      {thumbnail ? (
+                        <Image
+                          source={{ uri: thumbnail }}
+                          style={styles.suggestionThumb}
+                        />
+                      ) : (
+                        // fallback placeholder if no thumbnail
+                        <View style={[styles.suggestionThumb, styles.noImage]}>
+                          <Text style={{ fontSize: 10, textAlign: "center" }}>
+                            No Image
+                          </Text>
+                        </View>
+                      )}
+                      <Text style={styles.suggestionText}>
+                        {info.title || "No Title"}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                }}
               />
-            )}
+            )} */}
 
             {/* show selected */}
             {selectedBook && (
@@ -513,7 +617,7 @@ export default function PostScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: "#FFF" },
-  container: { padding: 20, flex: 1 },
+  container: { padding: 20, flex: 1, paddingTop: 40 },
   titleRow: { flexDirection: "row", justifyContent: "space-between" },
   title: { fontSize: 32, fontWeight: "bold" },
 

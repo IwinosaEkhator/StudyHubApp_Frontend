@@ -110,6 +110,7 @@ export default function UploadBookScreen() {
         headers: {
           // NOTE: Do NOT manually set Content‑Type; Axios will do it for FormData
           Authorization: `Bearer ${accessToken}`,
+          Accept: "application/json",
         },
       });
       console.log("⬅️ Axios response:", resp.data);
@@ -132,6 +133,7 @@ export default function UploadBookScreen() {
           method: "POST",
           headers: {
             Authorization: `Bearer ${accessToken}`,
+            Accept: "application/json",
             // do NOT set Content-Type
           },
           body: form,
@@ -151,6 +153,7 @@ export default function UploadBookScreen() {
 
   return (
     <View style={s.container}>
+      <Text className="text-4xl font-bold mb-4">Upload</Text>
       <Text style={s.label}>Title*</Text>
       <TextInput style={s.input} value={title} onChangeText={setTitle} />
       <Text style={s.label}>Authors</Text>
@@ -165,11 +168,15 @@ export default function UploadBookScreen() {
 
       {cover && <Image source={{ uri: cover.uri }} style={s.coverPreview} />}
       <TouchableOpacity style={s.btn} onPress={pickCover}>
-        <Text className="text-black font-semibold">{cover ? "Change Cover" : "Pick Cover"}</Text>
+        <Text className="text-black font-semibold">
+          {cover ? "Change Cover" : "Pick Cover"}
+        </Text>
       </TouchableOpacity>
 
       <TouchableOpacity style={s.btn} onPress={pickFile}>
-        <Text className="text-black font-semibold">{file ? file.name : "Pick PDF/EPUB"}</Text>
+        <Text className="text-black font-semibold">
+          {file ? file.name : "Pick PDF/EPUB"}
+        </Text>
       </TouchableOpacity>
 
       <TouchableOpacity
@@ -188,7 +195,12 @@ export default function UploadBookScreen() {
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: "#fff" },
+  container: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingTop: 60,
+    backgroundColor: "#fff",
+  },
   label: { marginTop: 10, fontWeight: "600" },
   input: {
     borderWidth: 1,

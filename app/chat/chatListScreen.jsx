@@ -189,7 +189,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFF",
   },
   container: {
-    // padding: 20,
+    paddingTop: 40,
   },
 
   chatContainer: {

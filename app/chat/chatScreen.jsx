@@ -339,7 +339,7 @@ export default function ChatScreen({ route, navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f2f2f2" },
+  container: { flex: 1, backgroundColor: "#f2f2f2", paddingTop: 30, },
   header: {
     flexDirection: "row",
     alignItems: "center",

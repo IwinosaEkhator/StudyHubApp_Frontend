@@ -1,5 +1,13 @@
-//Define the base URL for Laravel API
-const API_BASE_URL = "http://192.168.135.136:8000";
+import Constants from "expo-constants";
+
+const getHost = () => {
+  const dbg = Constants.manifest?.debuggerHost || "";
+  const ip = dbg.split(":")[0];
+  return ip || "192.168.67.136";
+};
+
+const HOST = getHost();
+export const API_BASE_URL = `http://${HOST}:8000`;
 
 //Define API endpoints using the base URL
 const API_ENDPOINTS = {
@@ -30,9 +38,6 @@ const API_ENDPOINTS = {
   // Post
   posts: `${API_BASE_URL}/api/posts`,
   likePost: id => `${API_BASE_URL}/api/posts/${id}/like`,
-
-
-
 };
 
 export default API_ENDPOINTS;

@@ -88,7 +88,7 @@ export default function App() {
         }}
       />
 
-      <Tab.Screen
+      {/* <Tab.Screen
         name="Upload"
         component={UploadBookScreen}
         options={{
@@ -100,7 +100,7 @@ export default function App() {
             />
           ),
         }}
-      />
+      /> */}
 
       <Tab.Screen
         name="Community"

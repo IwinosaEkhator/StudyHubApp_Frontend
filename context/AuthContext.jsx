@@ -3,63 +3,71 @@ import axios from "axios";
 import { Alert } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-// Create the AuthContext for global auth state
+// Create the AuthContext for global auth & profile-complete state
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [accessToken, setAccessToken] = useState(null);
   const [loading, setLoading] = useState(false);
-
-  // NEW: Flag to indicate auth state has been loaded from AsyncStorage
   const [authLoaded, setAuthLoaded] = useState(false);
 
-  // Create an Axios instance with the base URL of your backend API
-  const api = axios.create({
-    baseURL: 'http://192.168.135.136:8000/api', // Replace with your backend URL
-    timeout: 30000, // Increase timeout to 30 seconds
-  });
+  // NEW: track if the user completed topics-step
+  const [profileComplete, setProfileCompleteState] = useState(false);
 
-  // Helper function to set Authorization header when token is available
+  // Axios instance
+  const api = axios.create({
+    baseURL: 'http://192.168.67.136:8000/api',
+    timeout: 30000,
+  });
   const setAuthHeader = (token) => {
     api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
   };
 
-  // Load persisted auth state on mount
+  // Load persisted auth & profile-complete on mount
   useEffect(() => {
     const loadAuthState = async () => {
       try {
         const storedToken = await AsyncStorage.getItem('accessToken');
         const storedUser = await AsyncStorage.getItem('user');
+        const storedComplete = await AsyncStorage.getItem('profileComplete');
+
         if (storedToken && storedUser) {
           setAccessToken(storedToken);
           setUser(JSON.parse(storedUser));
           setAuthHeader(storedToken);
         }
+        if (storedComplete === 'true') {
+          setProfileCompleteState(true);
+        }
       } catch (error) {
         console.error('Failed to load auth state', error);
       } finally {
-        setAuthLoaded(true);  // Set flag after attempting to load auth state
+        setAuthLoaded(true);
       }
     };
-
     loadAuthState();
   }, []);
 
-  // Helper to persist auth state
+  // Persist auth state helper
   const persistAuthState = async (token, userData) => {
     try {
-      if (token && userData) {
-        await AsyncStorage.setItem('accessToken', token);
-        await AsyncStorage.setItem('user', JSON.stringify(userData));
-      } else {
-        console.warn('Invalid token or user data; skipping persistence');
-      }
+      await AsyncStorage.setItem('accessToken', token);
+      await AsyncStorage.setItem('user', JSON.stringify(userData));
     } catch (error) {
       console.error('Failed to persist auth state', error);
     }
   };
-  
+
+  // Persist profile-complete flag
+  const setProfileComplete = async (flag) => {
+    try {
+      await AsyncStorage.setItem('profileComplete', flag ? 'true' : 'false');
+      setProfileCompleteState(flag);
+    } catch (error) {
+      console.error('Failed to persist profileComplete', error);
+    }
+  };
 
   /**
    * Register a new user.
@@ -67,27 +75,22 @@ export const AuthProvider = ({ children }) => {
   const register = async (username, email, password) => {
     setLoading(true);
     try {
-      const response = await api.post('/signup', {
-        email,
-        username,
-        password,
-      });
-      console.log("Register response:", response.data); // Debug log
-      setAccessToken(response.data.token);
-      setUser(response.data.user);
-      setAuthHeader(response.data.token);
-      // Persist the auth state so that login persists even after app restart
-      await persistAuthState(response.data.token, response.data.user);
-      return response.data; // Return data on success
+      const response = await api.post('/signup', { username, email, password });
+      const { token, user: userData } = response.data;
+      setAccessToken(token);
+      setUser(userData);
+      setAuthHeader(token);
+      await persistAuthState(token, userData);
+      // leave profileComplete=false so TopicsScreen shows
+      return response.data;
     } catch (error) {
       console.error('Registration error:', error.response?.data || error.message);
       let errorMessage = 'An error occurred during registration.';
       if (error.response?.data?.error) {
-        if (typeof error.response.data.error === 'string') {
-          errorMessage = error.response.data.error;
-        } else if (typeof error.response.data.error === 'object') {
-          errorMessage = Object.values(error.response.data.error).flat().join('\n');
-        }
+        const err = error.response.data.error;
+        errorMessage = typeof err === 'string'
+          ? err
+          : Object.values(err).flat().join('\n');
       }
       Alert.alert('Registration Error', errorMessage);
       return null;
@@ -103,24 +106,23 @@ export const AuthProvider = ({ children }) => {
     setLoading(true);
     try {
       const response = await api.post('/signin', { email, password });
-      setAccessToken(response.data.token);
-      setUser(response.data.user);
-      setAuthHeader(response.data.token);
-      // Persist the auth state
-      await persistAuthState(response.data.token, response.data.user);
-      return response.data; // Return data on success
+      const { token, user: userData } = response.data;
+      setAccessToken(token);
+      setUser(userData);
+      setAuthHeader(token);
+      await persistAuthState(token, userData);
+      return response.data;
     } catch (error) {
       console.error('Login error:', error.response?.data || error.message);
       let errorMessage = 'An error occurred during login.';
       if (error.response?.data?.error) {
-        if (typeof error.response.data.error === 'string') {
-          errorMessage = error.response.data.error;
-        } else if (typeof error.response.data.error === 'object') {
-          errorMessage = Object.values(error.response.data.error).flat().join('\n');
-        }
+        const err = error.response.data.error;
+        errorMessage = typeof err === 'string'
+          ? err
+          : Object.values(err).flat().join('\n');
       }
       Alert.alert('Login Error', errorMessage);
-      return null; // Return null on error to prevent further crashes
+      return null;
     } finally {
       setLoading(false);
     }
@@ -132,14 +134,12 @@ export const AuthProvider = ({ children }) => {
   const logout = async () => {
     try {
       if (accessToken) {
-        await api.post('/signout', {
+        await api.post('/signout', null, {
           headers: { Authorization: `Bearer ${accessToken}` }
         });
       }
     } catch (error) {
-      if (error.response?.status === 401) {
-        console.log('Token already expired, proceeding with logout.');
-      } else {
+      if (error.response?.status !== 401) {
         console.error('Logout error:', error.response?.data || error.message);
         Alert.alert('Logout Error', 'An error occurred while logging out.');
       }
@@ -147,8 +147,8 @@ export const AuthProvider = ({ children }) => {
       setAccessToken(null);
       setUser(null);
       delete api.defaults.headers.common['Authorization'];
-      await AsyncStorage.removeItem('accessToken');
-      await AsyncStorage.removeItem('user');
+      await AsyncStorage.multiRemove(['accessToken', 'user', 'profileComplete']);
+      setProfileCompleteState(false);
     }
     return true;
   };
@@ -157,13 +157,14 @@ export const AuthProvider = ({ children }) => {
     <AuthContext.Provider
       value={{
         user,
-        setUser,
         accessToken,
         loading,
-        authLoaded, 
+        authLoaded,
+        profileComplete,
+        setProfileComplete,
         register,
         login,
-        logout
+        logout,
       }}
     >
       {children}
