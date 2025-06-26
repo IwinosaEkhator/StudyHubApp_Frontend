@@ -135,7 +135,7 @@ export default function PostScreen({ navigation }) {
     try {
       const payload = {
         content: newContent,
-        // book_link: selectedBook.volumeInfo.infoLink,
+        book_link: selectedBook.volumeInfo.infoLink,
       };
       const resp = await axios.post(API_ENDPOINTS.posts, payload, {
         headers: { Authorization: `Bearer ${accessToken}` },
@@ -332,20 +332,19 @@ export default function PostScreen({ navigation }) {
       )}
 
       <View style={styles.statsRow}>
-        <View style={styles.stat}>
-          <TouchableOpacity onPress={() => toggleLike(item)}>
-            <HeartIcon fill={item.liked ? "red" : "none"} />
-          </TouchableOpacity>
+        <TouchableOpacity onPress={() => toggleLike(item)} style={styles.stat}>
+          <HeartIcon fill={item.liked ? "red" : "none"} />
           <Text style={styles.statText}>{item.likes_count || 0}</Text>
-        </View>
+        </TouchableOpacity>
         {/* comment */}
-        <View style={styles.stat}>
-          <TouchableOpacity onPress={() => openComments(item)}>
-            <ChatIcon fill="#000" />
-          </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => openComments(item)}
+          style={styles.stat}
+        >
+          <ChatIcon fill="#000" />
           <Text style={styles.statText}>{item.comments_count || 0}</Text>
-        </View>
-        <SaveIcon />
+        </TouchableOpacity>
+        {/* <SaveIcon /> */}
       </View>
     </View>
   );

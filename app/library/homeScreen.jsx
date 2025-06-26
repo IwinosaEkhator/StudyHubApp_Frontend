@@ -100,11 +100,11 @@ const HomeScreen = ({ navigation }) => {
               />
               <Text className="ms-2 text-[20px] font-bold">StudyHub</Text>
             </View>
-            <Image
+            {/* <Image
               source={icons.notificationOn}
               className="w-[20px] h-[25px]"
               resizeMode="contain"
-            />
+            /> */}
           </View>
 
           {/* Search Bar */}
